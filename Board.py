@@ -1,3 +1,5 @@
+# TODO adjust board so it works for any size for e.g 4x4, 5x5 etc.
+
 class Board:
     """
     Description of TicTacToe model
@@ -58,38 +60,60 @@ class Board:
 
     def __init__(self, size=3):
         self.size = size
-        self.board = [['-1'] * self.size] * self.size
+        self.field_number = self.size ** 2
+        self.free_field = self.field_number
+        self.board = ['-1'] * self.field_number
         # self.board = [
-        #
-        #     ['-1', '-1', '-1'],
-        #     ['-1', '-1', '-1'],
-        #     ['O', 'O', '-1']
+            # '-1', '-1', '-1',
+            # '-1', '-1', '-1',
+            # 'O', 'O', '-1']
 
-        # ['-1', '-1', 'O'],
-        # ['-1', 'O', '-1'],
-        # ['O', 'O', '-1']
+            # '-1', '-1', 'O',
+            # '-1', 'O', '-1',
+            # 'O', 'O', '-1']
 
-        # ['O', '-1', '-1'],
-        # ['-1', 'O', '-1'],
-        # ['O', 'O', 'O']
+            # 'O', '-1', '-1',
+            # '-1', 'O', '-1',
+            # 'O', 'O', 'O']
 
-        # ['-1', '-1', '-1'],
-        # ['-1', '-1', '-1'],
-        # ['O', 'O', 'O']
+            # '-1', '-1', '-1',
+            # '-1', '-1', '-1',
+            # 'O', 'O', 'O']
+
+            # 'O', 'O', 'O',
+            # '-1', '-1', '-1',
+            # 'O', 'O', 'O']
+
+            # 'O', 'O', 'O', '-1',
+            # '-1', '-1', '-1', '-1',
+            # '-1', '-1', '-1', '-1',
+            # '-1', '-1', '-1', '-1']
+
+        # 'O', '-1', '-1',
+        # 'O', '-1', '-1',
+        # 'O', '-1', '-1']
+
+        # '-1', '-1', 'O',
+        # '-1', '-1', 'O',
+        # '-1', '-1', 'O']
 
         # ['X', 'X', 'X'],
         # ['-1', '-1', '-1'],
         # ['-1', '-1', '-1']
 
-        # ]
+        #
         self.player_mark = 'X'
         self.ai_mark = 'O'
         self.winner = None
 
     def __str__(self):
-        for row in self.board:
-            print(row, end=' ')
-            print()
+        print()
+        for field in range(self.field_number):
+            if field % self.size == 0 and field != 0:
+                print()
+                print('-----' * self.size)
+            print("%2s |" % self.board[field], end=' ')
+        print()
 
     def check_for_win(self) -> str:
         """
@@ -108,36 +132,58 @@ class Board:
         Check diagonal for winner and mark the winner.
         :return:
         """
-        for field in range(self.size):
-            # check left diagonal
-            if self.board[field][field] == self.board[field + 1][field + 1] == self.board[field + 2][field + 2] != '-1':
-                self.winner = self.board[field + 1][field + 1]
+        # check left diagonal
+        if self.board[0] == self.board[self.size + 1] == self.board[self.size * 2 + 2] != '-1':
+            self.winner = self.board[0]
 
-            # check right diagonal
-            if self.board[field + 2][field] == self.board[field + 1][field + 1] == self.board[field][field + 2] != '-1':
-                self.winner = self.board[field + 1][field + 1]
+        # check right diagonal
+        if self.board[self.size - 1] == self.board[self.size + 1] == self.board[self.size * 2] != '-1':
+            self.winner = self.board[self.size - 1]
 
-            return self.winner
+        return self.winner
 
     def check_columns(self) -> str:
         """
         Check columns for winner and mark the winner.
         :return:
         """
-        for col in range(self.size):
-            for row in range(self.size):
-                # check if there is a match any other than '-1'
-                if self.board[row][col] != '-1':
-                    self.winner = self.board[row][col]
-                    return self.winner
+        for col in range(0, self.size):
+            if self.board[col] == self.board[col + self.size] == self.board[col + self.size * 2] != '-1':
+                self.winner = self.board[col]
+                return self.winner
 
     def check_rows(self) -> str:
         """
         Check row for winner and mark the winner.
         :return:
         """
-        for row in self.board:
-            # check if there is a match any other than ['-1', '-1', '-1']
-            if row != ['-1', '-1', '-1']:
-                self.winner = row[0]
+        for row in range(0, self.field_number, self.size):
+            if self.board[row] == self.board[row + 1] == self.board[row + 2] != '-1':
+                self.winner = self.board[row]
                 return self.winner
+
+    def is_full(self) -> bool:
+        """
+        Checks if board is full.
+        :return:
+        """
+        if self.free_field > 0:
+            return False
+        else:
+            return True
+
+    def print_winner(self) -> None:
+        """
+        Print winner.
+        """
+        print(f'\n\nWinner: {self.winner}\n')
+
+    def make_move(self, player: str, field: int) -> None:
+        """
+        Make a move for player and field and decrement available fields.
+        """
+        if self.board[field] == '-1':
+            self.board[field] = player
+            self.free_field -= 1
+        else:
+            print(f"Field {field} is already taken.")
