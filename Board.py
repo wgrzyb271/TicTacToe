@@ -67,6 +67,9 @@ class Board:
         self.remaining_move_list = [field for field in range(0, self.field_number)]
         self.ai_marked_field = None
         self.turn = 'X'
+        self.index_element = None
+        self.move_history = []  # list of tuples (field, index_before_removal)
+
         # self.board = [
         # '-1', '-1', '-1',
         # '-1', '-1', '-1',
@@ -132,7 +135,6 @@ class Board:
         self.check_diagonal()
         self.check_rows()
         self.check_columns()
-
         return self.winner
 
     def check_diagonal(self) -> str:
@@ -143,13 +145,13 @@ class Board:
         # check left diagonal
         if self.board[0] == self.board[self.board_size + 1] == self.board[self.board_size * 2 + 2] != '-1':
             self.winner = self.board[0]
+            return self.winner
 
         # check right diagonal
         if self.board[self.board_size - 1] == self.board[self.board_size + 1] == self.board[
             self.board_size * 2] != '-1':
             self.winner = self.board[self.board_size - 1]
-
-        return self.winner
+            return self.winner
 
     def check_columns(self) -> str:
         """
@@ -193,25 +195,30 @@ class Board:
         """
         print(f'\n\nWinner: {self.winner}\n')
 
-    def _make_move(self, player: str, field: int) -> None:
-        """
-        Make a move for player and field and decrement available fields.
-        """
+    def make_move(self, player: str, field: int) -> None:
         if field is not None and self.board[field] == '-1':
             self.board[field] = player
             self.free_field -= 1
-            self.__str__()
-        # else:
-        #     print(f"Field {field} is already taken.")
+            index_before = self.remaining_move_list.index(field)
+            self.remaining_move_list.remove(field)
+            self.move_history.append((field, index_before))
+            self.__str__()  # remove debug output if not needed
+
 
     def undo_move(self, field):
         self.board[field] = '-1'
         self.free_field += 1
+        last_field, index_before = self.move_history.pop()
+        if last_field != field:
+            raise ValueError(f"Undo mismatch: expected {field}, got {last_field}")
+        self.remaining_move_list.insert(index_before, field)
+        # print(self.remaining_move_list)  # optional debug
+
 
     def player_move(self, field):
         if self.turn == self.player_mark:
-            self._make_move('X', field)
+            self.make_move('X', field)
 
     def ai_move(self, field):
         if self.turn == self.ai_mark:
-            self._make_move('O', field)
+            self.make_move('O', field)

@@ -36,12 +36,11 @@ class UI:
 
         while running:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
+                if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                     running = False
                 self._render_player(event)
 
             self.render_ai()
-            # self.render_ai(8)
         pygame.quit()
 
     def _render_player(self, event) -> None:
@@ -61,6 +60,7 @@ class UI:
         :return:
         """
         if self.turn == self.ai_mark:
+            self.ai.minimax(is_maximizing_player=True)
             field = self.ai.best_move
             self.ai.best_move = None
             self._mark_ai_move(field)
@@ -80,7 +80,7 @@ class UI:
                 self._draw_x(x, y)
                 self.board_class.update_board(field, self.player_mark)
                 self.turn = self.ai_mark
-                pygame.display.flip()
+                self.ai.update_legal_moves(field)
 
     def _mark_ai_move(self, field) -> None:
         if field is not None and not self.occupied_field[field]:
@@ -89,7 +89,7 @@ class UI:
             x, y = rect.center
             self._draw_o(x, y)
             self.turn = self.player_mark
-            pygame.display.flip()
+            self.ai.update_legal_moves(field)
 
     def _draw_o(self, x: int, y: int) -> None:
         """
@@ -99,6 +99,7 @@ class UI:
         offset = 1
         radius = self.rect_size / 2 - offset
         pygame.draw.circle(self.screen, pygame.Color('red'), (x, y), radius, 2)
+        pygame.display.flip()
 
     def _draw_x(self, x: int, y: int) -> None:
         """
@@ -106,6 +107,7 @@ class UI:
         """
         pygame.draw.line(self.screen, pygame.Color('green'), (x, y), (x + self.rect_size, y + self.rect_size), 2)
         pygame.draw.line(self.screen, pygame.Color('green'), (x + self.rect_size, y), (x, y + self.rect_size), 2)
+        pygame.display.flip()
 
     def _draw_board(self):
         """
