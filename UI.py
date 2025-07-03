@@ -39,8 +39,8 @@ class UI:
                 if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                     running = False
                 self._render_player(event)
-
             self.render_ai()
+            # pygame.display.update()
         pygame.quit()
 
     def _render_player(self, event) -> None:
@@ -60,11 +60,8 @@ class UI:
         :return:
         """
         if self.turn == self.ai_mark:
-            self.ai.minimax(is_maximizing_player=True)
-            field = self.ai.best_move
-            self.ai.best_move = None
-            self._mark_ai_move(field)
-            self.board_class.update_board(field, self.ai_mark)
+            move = self.ai.get_best_move()
+            self._mark_ai_move(move)
 
     def _mark_player_move(self, position: tuple) -> None:
         """
@@ -73,14 +70,11 @@ class UI:
         x, y = position
         for field, rect in enumerate(self.rect_list):
             if rect.collidepoint(x, y) and not self.occupied_field[field]:
-                self.player_move_field = field
-                self.board_class.remaining_move_list.remove(field)
                 self.occupied_field[field] = True
                 x, y = rect.topleft
                 self._draw_x(x, y)
-                self.board_class.update_board(field, self.player_mark)
+                self.board_class.player_move(field)
                 self.turn = self.ai_mark
-                self.ai.update_legal_moves(field)
 
     def _mark_ai_move(self, field) -> None:
         if field is not None and not self.occupied_field[field]:
@@ -88,8 +82,8 @@ class UI:
             rect = self.rect_list[field]
             x, y = rect.center
             self._draw_o(x, y)
+            self.board_class.ai_move(field)
             self.turn = self.player_mark
-            self.ai.update_legal_moves(field)
 
     def _draw_o(self, x: int, y: int) -> None:
         """

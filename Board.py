@@ -1,5 +1,4 @@
-# TODO adjust board so it works for any size for e.g 4x4, 5x5 etc.
-
+# TODO fix make_move and especially undo_move.
 class Board:
     """
     Description of TicTacToe model
@@ -122,20 +121,19 @@ class Board:
             print("%2s |" % self.board[field], end=' ')
         print()
 
-    def update_board(self, field, player):
-        if field is not None:
-            self.board[field] = player
-            self.__str__()
-
-    def check_for_win(self) -> str:
+    def check_for_win(self) -> bool:
         """
         Checks if there is a winner, if yes then return the winner.
         :return:
         """
+        self.winner = None # reset winner
         self.check_diagonal()
         self.check_rows()
         self.check_columns()
-        return self.winner
+        if self.winner is not None:
+            return True
+        else:
+            return False
 
     def check_diagonal(self) -> str:
         """
@@ -187,6 +185,7 @@ class Board:
         if self.is_full():
             return []
         else:
+            self.remaining_move_list = [i for i, field in enumerate(self.board) if field == "-1"]
             return self.remaining_move_list
 
     def print_winner(self) -> None:
@@ -195,30 +194,33 @@ class Board:
         """
         print(f'\n\nWinner: {self.winner}\n')
 
-    def make_move(self, player: str, field: int) -> None:
+    def make_move(self, player: str, field: int) -> bool:
         if field is not None and self.board[field] == '-1':
             self.board[field] = player
             self.free_field -= 1
-            index_before = self.remaining_move_list.index(field)
-            self.remaining_move_list.remove(field)
-            self.move_history.append((field, index_before))
-            self.__str__()  # remove debug output if not needed
+            return True
+        return False
+            # if player == self.player_mark:
+            #     self.turn = self.ai_mark
+            # else:
+            #     self.turn = self.player_mark
 
+            # self.__str__()  # remove debug output if not needed
 
     def undo_move(self, field):
         self.board[field] = '-1'
         self.free_field += 1
-        last_field, index_before = self.move_history.pop()
-        if last_field != field:
-            raise ValueError(f"Undo mismatch: expected {field}, got {last_field}")
-        self.remaining_move_list.insert(index_before, field)
-        # print(self.remaining_move_list)  # optional debug
-
+        # print('UNDO')
+        # self.__str__()
 
     def player_move(self, field):
-        if self.turn == self.player_mark:
-            self.make_move('X', field)
+        # if self.turn == self.player_mark:
+        result = self.make_move(self.player_mark, field)
+
+        return result
+
 
     def ai_move(self, field):
-        if self.turn == self.ai_mark:
-            self.make_move('O', field)
+        # if self.turn == self.ai_mark:
+        self.make_move(self.ai_mark, field)
+        # self.__str__()
