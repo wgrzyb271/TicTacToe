@@ -10,6 +10,7 @@ def print_fields(list) -> None:
 
 class UI:
     def __init__(self, board_class, ai, ai_mark, player_mark):
+        self.running = None
         pygame.init()
         self.size = width, height = 800, 800
         self.screen = pygame.display.set_mode(self.size)
@@ -26,21 +27,32 @@ class UI:
         self.turn = self.board_class.turn
 
     def run(self) -> None:
-        """
-        Runs the UI.
-        :return:
-        """
-        running = True
-
+        self.running = True
         self._draw_board()
 
-        while running:
+        while self.running and not self.board_class.is_full():
             for event in pygame.event.get():
                 if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
-                    running = False
+                    self.running = False
+                    break
+
                 self._render_player(event)
+
+            if not self.running:
+                break
+
             self.render_ai()
-            # pygame.display.update()
+
+            if self.board_class.check_for_win():
+                # self._display_winner(self.board_class.winner)
+                pygame.time.wait(3000)  # wait 3 seconds
+                self.running = False
+                break
+
+        if self.board_class.is_full() and not self.board_class.check_for_win():
+            print('Draw')
+            # self._display_winner("Draw")
+            pygame.time.wait(3000)
         pygame.quit()
 
     def _render_player(self, event) -> None:
