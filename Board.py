@@ -59,35 +59,39 @@ class Board:
     """
 
     def __init__(self, size=3):
-        self.size = size
-        self.field_number = self.size ** 2
+        self.board_size = size
+        self.field_number = self.board_size ** 2
         self.free_field = self.field_number
         self.board = ['-1'] * self.field_number
+
+        self.remaining_move_list = [field for field in range(0, self.field_number)]
+        self.ai_marked_field = None
+        self.turn = 'X'
         # self.board = [
-            # '-1', '-1', '-1',
-            # '-1', '-1', '-1',
-            # 'O', 'O', '-1']
+        # '-1', '-1', '-1',
+        # '-1', '-1', '-1',
+        # 'O', 'O', '-1']
 
-            # '-1', '-1', 'O',
-            # '-1', 'O', '-1',
-            # 'O', 'O', '-1']
+        # '-1', '-1', 'O',
+        # '-1', 'O', '-1',
+        # 'O', 'O', '-1']
 
-            # 'O', '-1', '-1',
-            # '-1', 'O', '-1',
-            # 'O', 'O', 'O']
+        # 'O', '-1', '-1',
+        # '-1', 'O', '-1',
+        # 'O', 'O', 'O']
 
-            # '-1', '-1', '-1',
-            # '-1', '-1', '-1',
-            # 'O', 'O', 'O']
+        # '-1', '-1', '-1',
+        # '-1', '-1', '-1',
+        # 'O', 'O', 'O']
 
-            # 'O', 'O', 'O',
-            # '-1', '-1', '-1',
-            # 'O', 'O', 'O']
+        # 'O', 'O', 'O',
+        # '-1', '-1', '-1',
+        # 'O', 'O', 'O']
 
-            # 'O', 'O', 'O', '-1',
-            # '-1', '-1', '-1', '-1',
-            # '-1', '-1', '-1', '-1',
-            # '-1', '-1', '-1', '-1']
+        # 'O', 'O', 'O', '-1',
+        # '-1', '-1', '-1', '-1',
+        # '-1', '-1', '-1', '-1',
+        # '-1', '-1', '-1', '-1']
 
         # 'O', '-1', '-1',
         # 'O', '-1', '-1',
@@ -109,18 +113,22 @@ class Board:
     def __str__(self):
         print()
         for field in range(self.field_number):
-            if field % self.size == 0 and field != 0:
+            if field % self.board_size == 0 and field != 0:
                 print()
-                print('-----' * self.size)
+                print('-----' * self.board_size)
             print("%2s |" % self.board[field], end=' ')
         print()
+
+    def update_board(self, field, player):
+        if field is not None:
+            self.board[field] = player
+            self.__str__()
 
     def check_for_win(self) -> str:
         """
         Checks if there is a winner, if yes then return the winner.
         :return:
         """
-
         self.check_diagonal()
         self.check_rows()
         self.check_columns()
@@ -133,12 +141,13 @@ class Board:
         :return:
         """
         # check left diagonal
-        if self.board[0] == self.board[self.size + 1] == self.board[self.size * 2 + 2] != '-1':
+        if self.board[0] == self.board[self.board_size + 1] == self.board[self.board_size * 2 + 2] != '-1':
             self.winner = self.board[0]
 
         # check right diagonal
-        if self.board[self.size - 1] == self.board[self.size + 1] == self.board[self.size * 2] != '-1':
-            self.winner = self.board[self.size - 1]
+        if self.board[self.board_size - 1] == self.board[self.board_size + 1] == self.board[
+            self.board_size * 2] != '-1':
+            self.winner = self.board[self.board_size - 1]
 
         return self.winner
 
@@ -147,8 +156,8 @@ class Board:
         Check columns for winner and mark the winner.
         :return:
         """
-        for col in range(0, self.size):
-            if self.board[col] == self.board[col + self.size] == self.board[col + self.size * 2] != '-1':
+        for col in range(0, self.board_size):
+            if self.board[col] == self.board[col + self.board_size] == self.board[col + self.board_size * 2] != '-1':
                 self.winner = self.board[col]
                 return self.winner
 
@@ -157,7 +166,7 @@ class Board:
         Check row for winner and mark the winner.
         :return:
         """
-        for row in range(0, self.field_number, self.size):
+        for row in range(0, self.field_number, self.board_size):
             if self.board[row] == self.board[row + 1] == self.board[row + 2] != '-1':
                 self.winner = self.board[row]
                 return self.winner
@@ -172,18 +181,37 @@ class Board:
         else:
             return True
 
+    def available_moves(self) -> list:
+        if self.is_full():
+            return []
+        else:
+            return self.remaining_move_list
+
     def print_winner(self) -> None:
         """
         Print winner.
         """
         print(f'\n\nWinner: {self.winner}\n')
 
-    def make_move(self, player: str, field: int) -> None:
+    def _make_move(self, player: str, field: int) -> None:
         """
         Make a move for player and field and decrement available fields.
         """
-        if self.board[field] == '-1':
+        if field is not None and self.board[field] == '-1':
             self.board[field] = player
             self.free_field -= 1
-        else:
-            print(f"Field {field} is already taken.")
+            self.__str__()
+        # else:
+        #     print(f"Field {field} is already taken.")
+
+    def undo_move(self, field):
+        self.board[field] = '-1'
+        self.free_field += 1
+
+    def player_move(self, field):
+        if self.turn == self.player_mark:
+            self._make_move('X', field)
+
+    def ai_move(self, field):
+        if self.turn == self.ai_mark:
+            self._make_move('O', field)
