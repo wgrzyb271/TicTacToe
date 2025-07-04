@@ -5,8 +5,6 @@ import threading
 import time
 
 
-# TODO create loop for Tic Tac Toe game.
-
 class TicTacToe:
     def __init__(self):
         self.board_class = Board.Board()

@@ -2,8 +2,6 @@ import time
 from math import inf
 
 
-# TODO create AI with MIN-MAX Algorithm.
-# TODO update best_move so the game won't stop.
 
 class AI:
     def __init__(self, board_class, ai_mark, player_mark):
@@ -31,28 +29,28 @@ class AI:
         if is_maximizing_player:
             best_score = -inf
             for empty_field in self.board_class.available_moves():
-                self.board_class.make_move(self.ai_mark, empty_field)
-                vertex = self.minimax(depth=depth + 1, is_maximizing_player=False, alpha=alpha, beta=beta)
+                self.board_class.ai_move(empty_field)
+                score = self.minimax(depth=depth + 1, is_maximizing_player=False, alpha=alpha, beta=beta)
                 self.board_class.undo_move(empty_field)
 
-                best_score = max(vertex, best_score)
-                if vertex >= beta:
+                best_score = max(score, best_score)
+                if score >= beta:
                     return best_score
-                elif vertex > alpha:
-                    alpha = vertex
+                elif score > alpha:
+                    alpha = score
             return best_score
         else:
             best_score = inf
             for empty_field in self.board_class.available_moves():
-                self.board_class.make_move(self.player_mark, empty_field)
-                vertex = self.minimax(depth=depth + 1, is_maximizing_player=True, alpha=alpha, beta=beta)
+                self.board_class.player_move(empty_field)
+                score = self.minimax(depth=depth + 1, is_maximizing_player=True, alpha=alpha, beta=beta)
                 self.board_class.undo_move(empty_field)
 
-                best_score = min(vertex, best_score)
-                if vertex <= alpha:
+                best_score = min(score, best_score)
+                if score <= alpha:
                     return best_score
-                elif vertex < beta:
-                    beta = vertex
+                elif score < beta:
+                    beta = score
             return best_score
 
     def get_best_move(self):
@@ -64,11 +62,11 @@ class AI:
 
         for move in self.board_class.available_moves():
             # Make a calculating move
-            self.board_class.board[move] = self.ai_mark
+            self.board_class.ai_move(move)
             # Recursively call minimax with the next depth and the minimizing player
-            score = self.minimax(0, False)
+            score = self.minimax(False, 0)
             # Reset the move
-            self.board_class.board[move] = "-1"
+            self.board_class.undo_move(move)
 
             # Update the best score
             if score > best_score:

@@ -1,7 +1,10 @@
+import time
+
 import pygame
+from pygame import AUDIO_ALLOW_ANY_CHANGE
 
 
-# TODO create GUI with user interaction.
+# TODO improve UI
 
 def print_fields(list) -> None:
     if len(list) > 0:
@@ -10,23 +13,40 @@ def print_fields(list) -> None:
 
 class UI:
     def __init__(self, board_class, ai, ai_mark, player_mark):
-        self.running = None
+        # UI init and screen settings
         pygame.init()
         self.size = width, height = 800, 800
         self.screen = pygame.display.set_mode(self.size)
         pygame.display.set_caption("Tic Tac Toe")
-        self.rect_size = 100
 
+        # visuals
+        self.background_color = pygame.Color("black")
+
+        # music
+        pygame.mixer.init(channels=2, allowedchanges=AUDIO_ALLOW_ANY_CHANGE)
+        self.music_loaded = False
+
+        # drawing fields
+
+        self.running = None
+        self.rect_size = 100
         self.board_class = board_class
-        self.ai = ai
-        self.ai_mark = ai_mark
-        self.player_mark = player_mark
         self.total_area = self.rect_size * self.board_class.field_number
         self.rect_list = []
         self.occupied_field = [False for _ in range(self.board_class.field_number)]
+
+        # game fields
+
+        self.ai = ai
+        self.ai_mark = ai_mark
+        self.player_mark = player_mark
         self.turn = self.board_class.turn
 
     def run(self) -> None:
+
+        self._draw_menu()
+        self._music_manager()
+
         self.running = True
         self._draw_board()
 
@@ -130,3 +150,34 @@ class UI:
                 self.rect_list.append(current_rect)
                 pygame.draw.rect(self.screen, pygame.Color('blue'), current_rect, 2)
         pygame.display.flip()
+
+    def _clear_screen(self) -> None:
+        """
+        Clears the screen.
+        """
+        self.screen.fill(self.background_color)
+
+    def _clean_up(self) -> None:
+        """
+            Cleans up the UI by quitting pygame and resetting any necessary variables.
+            """
+        self._music_manager()
+        pygame.quit()
+        self.running = False
+        self.rect_list.clear()
+        self.occupied_field = [False for _ in range(self.board_class.field_number)]
+
+    def _draw_menu(self):
+        self._clear_screen()
+
+    def _music_manager(self) -> None:
+        """
+        Manages music playback.
+        """
+        if not self.music_loaded:
+            pygame.mixer.music.load('music/beatbox.mp3')
+            self.music_loaded = True
+            pygame.mixer.music.play(-1)
+        else:
+            pygame.mixer.music.unload()
+            pygame.mixer.quit()

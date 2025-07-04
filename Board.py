@@ -200,27 +200,18 @@ class Board:
             self.free_field -= 1
             return True
         return False
-            # if player == self.player_mark:
-            #     self.turn = self.ai_mark
-            # else:
-            #     self.turn = self.player_mark
-
-            # self.__str__()  # remove debug output if not needed
 
     def undo_move(self, field):
         self.board[field] = '-1'
         self.free_field += 1
-        # print('UNDO')
         # self.__str__()
 
     def player_move(self, field):
-        # if self.turn == self.player_mark:
         result = self.make_move(self.player_mark, field)
 
         return result
 
 
     def ai_move(self, field):
-        # if self.turn == self.ai_mark:
         self.make_move(self.ai_mark, field)
         # self.__str__()
