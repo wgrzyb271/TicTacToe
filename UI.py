@@ -1,5 +1,3 @@
-import time
-
 import pygame
 from pygame import AUDIO_ALLOW_ANY_CHANGE
 
@@ -174,10 +172,11 @@ class UI:
         """
         Manages music playback.
         """
-        if not self.music_loaded:
-            pygame.mixer.music.load('music/beatbox.mp3')
-            self.music_loaded = True
-            pygame.mixer.music.play(-1)
-        else:
-            pygame.mixer.music.unload()
-            pygame.mixer.quit()
+        pass
+        # if not self.music_loaded:
+        #     pygame.mixer.music.load('music/beatbox.mp3')
+        #     self.music_loaded = True
+        #     pygame.mixer.music.play(-1)
+        # else:
+        #     pygame.mixer.music.unload()
+        #     pygame.mixer.quit()

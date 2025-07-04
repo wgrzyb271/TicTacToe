@@ -72,7 +72,7 @@ class Board:
         # self.board = [
         # '-1', '-1', '-1',
         # '-1', '-1', '-1',
-        # 'O', 'O', '-1']
+        # 'O', 'O', 'X']
 
         # '-1', '-1', 'O',
         # '-1', 'O', '-1',
@@ -90,10 +90,31 @@ class Board:
         # '-1', '-1', '-1',
         # 'O', 'O', 'O']
 
-        # 'O', 'O', 'O', '-1',
-        # '-1', '-1', '-1', '-1',
-        # '-1', '-1', '-1', '-1',
-        # '-1', '-1', '-1', '-1']
+        # 'O', 'O', 'O', 'O',
+        # 'X', '-1', 'X', '-1',
+        # '-1', 'O', '-1', '-1',
+        # '-1', '-1', '-1', 'X']
+
+
+            # '-1', '-1', '-1', '-1',
+            # '-1', 'O', '-1', '-1',
+            # '-1', '-1', '-1', 'X',
+            # 'O', 'O', 'O', 'O']
+
+            # 'O', '-1', '-1', '-1',
+            # '-1', 'O', '-1', '-1',
+            # '-1', '-1', 'O', 'X',
+            # 'O', 'O', 'O', 'O']
+
+            # 'O', '-1', '-1', 'X',
+            # '-1', '-1', 'X', '-1',
+            # '-1', 'X', 'O', 'X',
+            # 'O', 'O', 'O', 'O']
+
+            # '-1', 'O', '-1', '-1',
+            # '-1', 'O', '-1', '-1',
+            # '-1', 'O', '-1', 'X',
+            # 'O', 'O', 'O', 'O']
 
         # 'O', '-1', '-1',
         # 'O', '-1', '-1',
@@ -135,41 +156,76 @@ class Board:
         else:
             return False
 
-    def check_diagonal(self) -> str:
+    def check_diagonal(self) -> str | None:
         """
         Check diagonal for winner and mark the winner.
         :return:
         """
         # check left diagonal
-        if self.board[0] == self.board[self.board_size + 1] == self.board[self.board_size * 2 + 2] != '-1':
-            self.winner = self.board[0]
+        move = self.board[0]
+        pattern = [move for _ in range(self.board_size)]
+        offset = self.board_size + 1
+        frame = [self.board[field * offset] for field in range(self.board_size)]
+        if move != '-1' and pattern == frame:
+            self.winner = move
             return self.winner
 
         # check right diagonal
-        if self.board[self.board_size - 1] == self.board[self.board_size + 1] == self.board[
-            self.board_size * 2] != '-1':
-            self.winner = self.board[self.board_size - 1]
+        move = self.board[self.board_size - 1]
+        pattern = [move for _ in range(self.board_size)]
+        offset = self.board_size - 1
+        frame = [self.board[(self.board_size - 1) + field * offset] for field in range(self.board_size)]
+        if move != '-1' and pattern == frame:
+            self.winner = move
             return self.winner
 
-    def check_columns(self) -> str:
+        return None
+
+        # if self.board[0] == self.board[self.board_size + 1] == self.board[self.board_size * 2 + 2] != '-1':
+        #     self.winner = self.board[0]
+        #     return self.winner
+
+        # check right diagonal
+        # if self.board[self.board_size - 1] == self.board[self.board_size + 1] == self.board[
+        #     self.board_size * 2] != '-1':
+        #     self.winner = self.board[self.board_size - 1]
+        #     return self.winner
+
+    def check_columns(self) -> str | None:
         """
         Check columns for winner and mark the winner.
         :return:
         """
         for col in range(0, self.board_size):
-            if self.board[col] == self.board[col + self.board_size] == self.board[col + self.board_size * 2] != '-1':
-                self.winner = self.board[col]
+            move = self.board[col]
+            pattern = [move for _ in range(0, self.board_size)]
+            frame = [self.board[col + i * self.board_size] for i in range(0, self.board_size)]
+            if move != '-1' and pattern == frame:
+                self.winner = move
                 return self.winner
+        return None
+        # for col in range(0, self.board_size):
+        #     if self.board[col] == self.board[col + self.board_size] == self.board[col + self.board_size * 2] != '-1':
+        #         self.winner = self.board[col]
+        #         return self.winner
 
-    def check_rows(self) -> str:
+    def check_rows(self) -> str | None:
         """
         Check row for winner and mark the winner.
         :return:
         """
         for row in range(0, self.field_number, self.board_size):
-            if self.board[row] == self.board[row + 1] == self.board[row + 2] != '-1':
-                self.winner = self.board[row]
+            move = self.board[row]
+            pattern = [move for _ in range(row, row + self.board_size)]
+            frame = [self.board[i] for i in range(row, row + self.board_size)]
+            if move != '-1' and pattern == frame:
+                self.winner = move
                 return self.winner
+        return None
+        # for row in range(0, self.field_number, self.board_size):
+        #     if self.board[row] == self.board[row + 1] == self.board[row + 2] != '-1':
+        #         self.winner = self.board[row]
+        #         return self.winner
 
     def is_full(self) -> bool:
         """

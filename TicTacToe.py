@@ -1,8 +1,6 @@
-import Board
 import AI
+import Board
 import UI
-import threading
-import time
 
 
 class TicTacToe:
@@ -21,6 +19,8 @@ class TicTacToe:
         self.running = True
 
     def start(self):
+        # self.board_class.__str__()
+        # print(self.board_class.check_diagonal())
         self.ui.run()
         # self.board_class.__str__()
         # while self.running and not self.board_class.is_full():
