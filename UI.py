@@ -1,12 +1,23 @@
+import time
+from enum import Enum
+from unittest import case
+
 import pygame
 from pygame import AUDIO_ALLOW_ANY_CHANGE
 
 
-# TODO improve UI
+# TODO improve UI - add settings screen and option to play 1 vs 1 player
+
+class Option(Enum):
+    SINGLE_PLAYER = 0
+    MULTIPLE_PLAYER = 1
+    SETTINGS = 2
+
 
 def print_fields(list) -> None:
     if len(list) > 0:
         print(list)
+
 
 
 class UI:
@@ -19,6 +30,8 @@ class UI:
 
         # visuals
         self.background_color = pygame.Color("black")
+        self.menu = Menu(self.screen, self._clear_screen, self.background_color)
+        self.choice = None
 
         # music
         pygame.mixer.init(channels=2, allowedchanges=AUDIO_ALLOW_ANY_CHANGE)
@@ -42,12 +55,31 @@ class UI:
 
     def run(self) -> None:
 
-        self._draw_menu()
-        self._music_manager()
 
+        self._music_manager()
         self.running = True
+        self.choice = self.menu.main_menu()
+
         self._draw_board()
 
+        match Option(self.choice):
+            case Option.SINGLE_PLAYER:
+                self._single_player_game()
+            case Option.MULTIPLE_PLAYER:
+                self._multiple_player_game()
+            case Option.SETTINGS:
+                self._game_settings()
+            case _:
+                raise Exception("Invalid option")
+
+        if self.board_class.is_full() and not self.board_class.check_for_win():
+            print('Draw')
+            # self._display_winner("Draw")
+            pygame.time.wait(3000)
+        self._clean_up()
+        pygame.quit()
+
+    def _single_player_game(self) -> None:
         while self.running and not self.board_class.is_full():
             for event in pygame.event.get():
                 if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
@@ -67,11 +99,12 @@ class UI:
                 self.running = False
                 break
 
-        if self.board_class.is_full() and not self.board_class.check_for_win():
-            print('Draw')
-            # self._display_winner("Draw")
-            pygame.time.wait(3000)
-        pygame.quit()
+    def _multiple_player_game(self) -> None:
+        pass
+
+    def _game_settings(self) -> None:
+        pass
+
 
     def _render_player(self, event) -> None:
         """
@@ -165,8 +198,8 @@ class UI:
         self.rect_list.clear()
         self.occupied_field = [False for _ in range(self.board_class.field_number)]
 
-    def _draw_menu(self):
-        self._clear_screen()
+
+
 
     def _music_manager(self) -> None:
         """
@@ -180,3 +213,113 @@ class UI:
         # else:
         #     pygame.mixer.music.unload()
         #     pygame.mixer.quit()
+
+
+def get_center(width, height):
+    screen_width, screen_height = pygame.display.get_surface().get_size()
+    return (screen_width - width) / 2, (screen_height - height) / 2
+
+
+class Menu:
+    def __init__(self, screen: pygame.Surface, _clear_screen, background_color) -> None:
+        self.running = True
+        self.has_chosen = False
+        self.choice = None
+
+
+        self.screen = screen
+        self.screen_width = self.screen.get_width()
+        self.screen_height = self.screen.get_height()
+        self.background_color = background_color
+        self._clear_screen = _clear_screen
+        self.tile_list = list()
+        self.tile_width = 10
+        self.tile_height = 10
+        self.tile_number = 3
+        self.tile_color = pygame.Color('white')
+        self.width_factor = 0.8
+        self.tile_gap = 30
+        self.tile_area_width = self.tile_width
+        self.tile_area_height = (self.tile_height + self.tile_gap) * self.tile_number
+
+        # fonts
+        pygame.font.init()
+        self.font = pygame.font.Font(None, 36)  # None = default font, 36 = font size
+        self.font_color = pygame.Color('blue')
+        self.texts = ['SINGLE-PLAYER', 'MULTI-PLAYER', 'SETTINGS']
+
+    def main_menu(self) -> Option:
+        self._draw_menu()
+
+        while self.running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                    self.running = False
+                    self.clean_up()
+                    return self.choice
+
+                self._check_tile(event)
+
+                if self.has_chosen:
+                    self.reset_attr()
+                    self._clear_screen()
+                    return self.choice
+        return self.choice
+
+    def single_player(self) -> None:
+        self.has_chosen = True
+        self.choice = Option.SINGLE_PLAYER
+
+    def multi_player(self) -> None:
+        self.has_chosen = True
+        self.choice = Option.MULTIPLE_PLAYER
+
+    def settings(self):
+        self.has_chosen = True
+        self.choice = Option.SETTINGS
+
+    def _check_tile(self, event):
+        x, y = pygame.mouse.get_pos()
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            for idx, tile in enumerate(self.tile_list):
+                if tile.collidepoint(x, y):
+                    match Option(idx):
+                        case Option.SINGLE_PLAYER:
+                            self.single_player()
+                        case Option.MULTIPLE_PLAYER:
+                            self.multi_player()
+                        case Option.SETTINGS:
+                            self.settings()
+                        case _:
+                            raise Exception("Invalid tile")
+
+    def _draw_menu(self):
+        # print title
+        center_x, center_y = get_center(self.tile_area_width, self.tile_area_height)
+        self._print_text(*get_center(0, self.screen_height - 200), text='Tic Tac Toe')
+        for i in range(self.tile_number):
+            # create tile
+            tile = pygame.Rect(center_x, center_y + i * self.tile_gap, self.tile_width, self.tile_height)
+            # render font and draw tile
+            text_surface = self.font.render(self.texts[i], True, self.font_color, self.tile_color)
+            text_rect = text_surface.get_rect(center=tile.center)
+            self.tile_list.append(text_rect)
+            self.screen.blit(text_surface, text_rect)
+
+        pygame.display.flip()
+
+    def _print_text(self, x: int, y: int, text, font_name=None, font_color=pygame.Color('green'), font_background=None) -> None:
+        font = pygame.font.Font(font_name, 36)
+        if font_background is None:
+            text_surface = font.render(text, True, pygame.Color(font_color))
+        else:
+            text_surface = font.render(text, True, pygame.Color(font_color), pygame.Color(font_background))
+        text_rect = text_surface.get_rect(center=(x, y))
+        self.screen.blit(text_surface, text_rect)
+
+    def reset_attr(self):
+        self.tile_list.clear()
+
+    def clean_up(self):
+        self.reset_attr()
+        pygame.font.quit()
