@@ -1,10 +1,10 @@
 import time
 from enum import Enum
 from unittest import case
-
+import tkinter as tk
 import pygame
 from pygame import AUDIO_ALLOW_ANY_CHANGE
-
+import pygame_gui
 
 # TODO improve UI - add settings screen and option to play 1 vs 1 player
 
@@ -12,12 +12,24 @@ class Option(Enum):
     SINGLE_PLAYER = 0
     MULTIPLE_PLAYER = 1
     SETTINGS = 2
+    EXIT = 3
+    MAIN_MENU = 4
 
 
 def print_fields(list) -> None:
     if len(list) > 0:
         print(list)
 
+
+def print_text(screen: pygame.Surface, x: int, y: int, text, font_name=None, font_color='green',
+               font_background=None) -> None:
+    font = pygame.font.Font(font_name, 36)
+    if font_background is None:
+        text_surface = font.render(text, True, pygame.Color(font_color))
+    else:
+        text_surface = font.render(text, True, pygame.Color(font_color), pygame.Color(font_background))
+    text_rect = text_surface.get_rect(center=(x, y))
+    screen.blit(text_surface, text_rect)
 
 
 class UI:
@@ -28,10 +40,21 @@ class UI:
         self.screen = pygame.display.set_mode(self.size)
         pygame.display.set_caption("Tic Tac Toe")
 
+        # game fields
+        self.board_class = board_class
+        self.ai = ai
+        self.ai_mark = ai_mark
+        self.player_mark = player_mark
+        self.turn = self.board_class.turn
+
         # visuals
         self.background_color = pygame.Color("black")
-        self.menu = Menu(self.screen, self._clear_screen, self.background_color)
+        self.manager = pygame_gui.UIManager(self.screen.get_size())
+        # self.manager = pygame_gui.UIManager(self.screen.get_size(), 'styles/theme.json')
+        self.clock = pygame.time.Clock()
+        self.menu = Menu(self.screen, self._clear_screen, self.background_color, self.manager, self.clock)
         self.choice = None
+        self.settings = Settings(self.screen, self._clear_screen, self.background_color, self.manager, self.clock)
 
         # music
         pygame.mixer.init(channels=2, allowedchanges=AUDIO_ALLOW_ANY_CHANGE)
@@ -41,45 +64,53 @@ class UI:
 
         self.running = None
         self.rect_size = 100
-        self.board_class = board_class
         self.total_area = self.rect_size * self.board_class.field_number
         self.rect_list = []
         self.occupied_field = [False for _ in range(self.board_class.field_number)]
 
-        # game fields
 
-        self.ai = ai
-        self.ai_mark = ai_mark
-        self.player_mark = player_mark
-        self.turn = self.board_class.turn
 
     def run(self) -> None:
 
-
         self._music_manager()
         self.running = True
-        self.choice = self.menu.main_menu()
+        while True:
+            self.choice = self.menu.main_menu()
 
-        self._draw_board()
+            match self.choice:
+                case Option.SINGLE_PLAYER:
+                    self._single_player_game()
+                case Option.MULTIPLE_PLAYER:
+                    self._multiple_player_game()
+                case Option.SETTINGS:
+                    self.choice, self.player_mark, self.ai_mark = self.settings.game_settings(self.player_mark, self.ai_mark)
+                    self.board_class.set_marks(self.player_mark, self.ai_mark)
+                    print(self.player_mark)
+                    print(self.ai_mark)
+                case Option.MAIN_MENU:
+                    continue
+                case Option.EXIT:
+                    self._clean_up()
+                    pygame.quit()
+                    exit(0)
+                case _:
+                    raise Exception("Invalid option")
 
-        match Option(self.choice):
-            case Option.SINGLE_PLAYER:
-                self._single_player_game()
-            case Option.MULTIPLE_PLAYER:
-                self._multiple_player_game()
-            case Option.SETTINGS:
-                self._game_settings()
-            case _:
-                raise Exception("Invalid option")
+        # if self.board_class.is_full() and not self.board_class.check_for_win():
+        #     print('Draw')
+        #     # self._display_winner("Draw")
+        #     pygame.time.wait(3000)
 
-        if self.board_class.is_full() and not self.board_class.check_for_win():
-            print('Draw')
-            # self._display_winner("Draw")
-            pygame.time.wait(3000)
-        self._clean_up()
-        pygame.quit()
+    def reset_game(self):
+        self.rect_list = []
+        self.occupied_field = [False for _ in range(self.board_class.field_number)]
+        self.turn = self.board_class.turn
+        self.running = True
+        self.board_class.reset_board()
 
     def _single_player_game(self) -> None:
+        self.reset_game()
+        self._draw_board()
         while self.running and not self.board_class.is_full():
             for event in pygame.event.get():
                 if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
@@ -94,17 +125,15 @@ class UI:
             self.render_ai()
 
             if self.board_class.check_for_win():
+                # self.board_class.__str__()
                 # self._display_winner(self.board_class.winner)
                 pygame.time.wait(3000)  # wait 3 seconds
                 self.running = False
                 break
 
     def _multiple_player_game(self) -> None:
-        pass
-
-    def _game_settings(self) -> None:
-        pass
-
+        self.reset_game()
+        self._draw_board()
 
     def _render_player(self, event) -> None:
         """
@@ -126,6 +155,8 @@ class UI:
             move = self.ai.get_best_move()
             self._mark_ai_move(move)
 
+
+
     def _mark_player_move(self, position: tuple) -> None:
         """
         Registers the move on the board.
@@ -134,8 +165,12 @@ class UI:
         for field, rect in enumerate(self.rect_list):
             if rect.collidepoint(x, y) and not self.occupied_field[field]:
                 self.occupied_field[field] = True
-                x, y = rect.topleft
-                self._draw_x(x, y)
+                if self.player_mark == 'X':
+                    x, y = rect.topleft
+                    self._draw_x(x, y)
+                else:
+                    x, y = rect.center
+                    self._draw_o(x, y)
                 self.board_class.player_move(field)
                 self.turn = self.ai_mark
 
@@ -143,8 +178,12 @@ class UI:
         if field is not None and not self.occupied_field[field]:
             self.occupied_field[field] = True
             rect = self.rect_list[field]
-            x, y = rect.center
-            self._draw_o(x, y)
+            if self.ai_mark == 'X':
+                x, y = rect.topleft
+                self._draw_x(x, y)
+            else:
+                x, y = rect.center
+                self._draw_o(x, y)
             self.board_class.ai_move(field)
             self.turn = self.player_mark
 
@@ -170,6 +209,7 @@ class UI:
         """
         Draws the board specific size on the screen.
         """
+        self._clear_screen()
         screen_width, screen_height = pygame.display.get_surface().get_size()
         for i in range(self.board_class.board_size):
             for j in range(self.board_class.board_size):
@@ -198,21 +238,17 @@ class UI:
         self.rect_list.clear()
         self.occupied_field = [False for _ in range(self.board_class.field_number)]
 
-
-
-
     def _music_manager(self) -> None:
         """
         Manages music playback.
         """
-        pass
-        # if not self.music_loaded:
-        #     pygame.mixer.music.load('music/beatbox.mp3')
-        #     self.music_loaded = True
-        #     pygame.mixer.music.play(-1)
-        # else:
-        #     pygame.mixer.music.unload()
-        #     pygame.mixer.quit()
+        if not self.music_loaded:
+            pygame.mixer.music.load('music/beatbox.mp3')
+            self.music_loaded = True
+            pygame.mixer.music.play(-1)
+        else:
+            pygame.mixer.music.unload()
+            pygame.mixer.quit()
 
 
 def get_center(width, height):
@@ -221,105 +257,275 @@ def get_center(width, height):
 
 
 class Menu:
-    def __init__(self, screen: pygame.Surface, _clear_screen, background_color) -> None:
+    def __init__(self, screen: pygame.Surface, _clear_screen, background_color, manager, clock) -> None:
+        self.screen = screen
+        self._clear_screen = _clear_screen
+        self.background_color = background_color
+
         self.running = True
         self.has_chosen = False
         self.choice = None
 
+        self.manager = manager
+        self.clock = clock
 
-        self.screen = screen
-        self.screen_width = self.screen.get_width()
-        self.screen_height = self.screen.get_height()
-        self.background_color = background_color
-        self._clear_screen = _clear_screen
-        self.tile_list = list()
-        self.tile_width = 10
-        self.tile_height = 10
-        self.tile_number = 3
-        self.tile_color = pygame.Color('white')
-        self.width_factor = 0.8
-        self.tile_gap = 30
-        self.tile_area_width = self.tile_width
-        self.tile_area_height = (self.tile_height + self.tile_gap) * self.tile_number
+        self.buttons = []
 
-        # fonts
-        pygame.font.init()
-        self.font = pygame.font.Font(None, 36)  # None = default font, 36 = font size
-        self.font_color = pygame.Color('blue')
-        self.texts = ['SINGLE-PLAYER', 'MULTI-PLAYER', 'SETTINGS']
+
+    def _create_gui_elements(self):
+        self.manager.clear_and_reset()
+        self._clear_screen()
+        # self.buttons.clear()
+
+
+        screen_width, screen_height = self.screen.get_size()
+        center_x = screen_width // 2
+        start_y = screen_height // 2 - 100
+        button_width = 200
+        button_height = 50
+        spacing = 60
+
+        # title label
+        self.title_label = pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect((center_x - 100, start_y - 100), (200, 50)),
+            text='Tic Tac Toe',
+            manager=self.manager,
+            object_id="#title_label"
+        )
+
+        # buttons
+        options = [
+            ("SINGLE-PLAYER", Option.SINGLE_PLAYER),
+            ("MULTI-PLAYER", Option.MULTIPLE_PLAYER),
+            ("SETTINGS", Option.SETTINGS)
+        ]
+
+        for i, (text, opt_enum) in enumerate(options):
+            btn = pygame_gui.elements.UIButton(
+                relative_rect=pygame.Rect((center_x - button_width // 2,
+                                           start_y + i * spacing),
+                                          (button_width, button_height)),
+                text=text,
+                manager=self.manager,
+                object_id=f"@{opt_enum.name}"
+            )
+            self.buttons.append((btn, opt_enum))
 
     def main_menu(self) -> Option:
-        self._draw_menu()
+        self._create_gui_elements()
 
         while self.running:
+            time_delta = self.clock.tick(60) / 1000.0
             for event in pygame.event.get():
                 if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                     self.running = False
                     self.clean_up()
-                    return self.choice
+                    return Option.EXIT
 
-                self._check_tile(event)
+                if event.type == pygame_gui.UI_BUTTON_PRESSED:
+                    for btn, opt_enum in self.buttons:
+                        if event.ui_element == btn:
+                            self.reset_attr()
+                            self._clear_screen()
+                            return opt_enum
 
-                if self.has_chosen:
-                    self.reset_attr()
-                    self._clear_screen()
-                    return self.choice
+                self.manager.process_events(event)
+
+            self.manager.update(time_delta)
+            self.screen.fill(self.background_color)
+            self.manager.draw_ui(self.screen)
+            pygame.display.flip()
+
         return self.choice
 
-    def single_player(self) -> None:
-        self.has_chosen = True
-        self.choice = Option.SINGLE_PLAYER
-
-    def multi_player(self) -> None:
-        self.has_chosen = True
-        self.choice = Option.MULTIPLE_PLAYER
-
-    def settings(self):
-        self.has_chosen = True
-        self.choice = Option.SETTINGS
-
-    def _check_tile(self, event):
-        x, y = pygame.mouse.get_pos()
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            for idx, tile in enumerate(self.tile_list):
-                if tile.collidepoint(x, y):
-                    match Option(idx):
-                        case Option.SINGLE_PLAYER:
-                            self.single_player()
-                        case Option.MULTIPLE_PLAYER:
-                            self.multi_player()
-                        case Option.SETTINGS:
-                            self.settings()
-                        case _:
-                            raise Exception("Invalid tile")
-
-    def _draw_menu(self):
-        # print title
-        center_x, center_y = get_center(self.tile_area_width, self.tile_area_height)
-        self._print_text(*get_center(0, self.screen_height - 200), text='Tic Tac Toe')
-        for i in range(self.tile_number):
-            # create tile
-            tile = pygame.Rect(center_x, center_y + i * self.tile_gap, self.tile_width, self.tile_height)
-            # render font and draw tile
-            text_surface = self.font.render(self.texts[i], True, self.font_color, self.tile_color)
-            text_rect = text_surface.get_rect(center=tile.center)
-            self.tile_list.append(text_rect)
-            self.screen.blit(text_surface, text_rect)
-
-        pygame.display.flip()
-
-    def _print_text(self, x: int, y: int, text, font_name=None, font_color=pygame.Color('green'), font_background=None) -> None:
-        font = pygame.font.Font(font_name, 36)
-        if font_background is None:
-            text_surface = font.render(text, True, pygame.Color(font_color))
-        else:
-            text_surface = font.render(text, True, pygame.Color(font_color), pygame.Color(font_background))
-        text_rect = text_surface.get_rect(center=(x, y))
-        self.screen.blit(text_surface, text_rect)
-
     def reset_attr(self):
-        self.tile_list.clear()
+        self.has_chosen = False
+        self.choice = None
+        self.buttons.clear()
+        self.manager.clear_and_reset()
 
     def clean_up(self):
         self.reset_attr()
-        pygame.font.quit()
+
+
+
+
+class Settings:
+    def __init__(self, screen: pygame.Surface, _clear_screen, background_color, manager, clock) -> None:
+        self.running = True
+        self.screen = screen
+        self.manager = manager
+        self._clear_screen = _clear_screen
+        self.background_color = background_color
+        self.clock = pygame.time.Clock()
+        self.rect_size = 40
+
+        self.texts = [
+            ('Settings', 'green'),
+            ('Change Player Mark - X is default', None),
+            ('Music: Toggle ON/OFF', None),
+            ('Change Music Track - Use Left/Right Arrows', None),
+            ('Volume: Use Up/Down Arrows to Adjust', None),
+        ]
+
+        # elements
+        self.labels = []
+        self.slider = None
+        self.volume_label = None
+        self.volume = 50
+
+
+        self.x_button = None
+        self.o_button = None
+        self.selected_mark = 'X'
+        self.music_on = True
+        self.music_toggle_button = None
+        self.prev_track_button = None
+        self.next_track_button = None
+        self.go_back_button = None
+
+        # load images
+        self.x_image = pygame.image.load("image/X.png")
+        self.o_image = pygame.image.load("image/O.png")
+        self.x_image = pygame.transform.scale(self.x_image, (40, 40))
+        self.o_image = pygame.transform.scale(self.o_image, (40, 40))
+
+    def game_settings(self, player, ai):
+        self._draw_settings()
+
+        while self.running:
+            time_delta = self.clock.tick(60) / 1000.0
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                    break
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    self.running = False
+                    break
+
+                if event.type == pygame.USEREVENT:
+                    if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+                        if event.ui_element == self.x_button:
+                            self.selected_mark = 'X'
+                            player = 'X'
+                            ai = 'O'
+                        elif event.ui_element == self.o_button:
+                            self.selected_mark = 'O'
+                            player = 'O'
+                            ai = 'X'
+                        elif event.ui_element == self.music_toggle_button:
+                            self.music_on = not self.music_on
+                            if self.music_on:
+                                pygame.mixer.music.unpause()
+                                self.music_toggle_button.set_text("Music: ON")
+                            else:
+                                pygame.mixer.music.pause()
+                                self.music_toggle_button.set_text("Music: OFF")
+                        elif event.ui_element == self.prev_track_button:
+                            print("Previous music track")  # TODO: implement actual logic
+                        elif event.ui_element == self.next_track_button:
+                            print("Next music track")  # TODO: implement actual logic
+                        elif event.ui_element == self.go_back_button:
+                            return Option.MAIN_MENU, player, ai
+
+                    elif event.user_type == pygame_gui.UI_HORIZONTAL_SLIDER_MOVED and event.ui_element == self.slider:
+                        self.volume = self.slider.get_current_value()
+                        pygame.mixer.music.set_volume(self.volume / 100.0)
+                        self.volume_label.set_text(f'{int(self.volume)}%')
+
+                self.manager.process_events(event)
+
+            self.manager.update(time_delta)
+            self._clear_screen()
+            self.manager.draw_ui(self.screen)
+            self.draw_images_on_buttons()
+            self._draw_selected_border()
+            pygame.display.flip()
+        return Option.MAIN_MENU, player, ai
+
+
+    def _draw_selected_border(self):
+        if self.selected_mark == 'X' and self.x_button:
+            pygame.draw.rect(self.screen, pygame.Color('red'), self.x_button.rect, 3)
+        elif self.selected_mark == 'O' and self.o_button:
+            pygame.draw.rect(self.screen, pygame.Color('red'), self.o_button.rect, 3)
+
+    def _draw_settings(self):
+        self.manager.clear_and_reset()
+        self._clear_screen()
+        center_x, start_y = get_center(0, self.screen.get_height() - 200)
+        line_spacing = 100
+
+        y = start_y
+        for i, (text, color) in enumerate(self.texts):
+            y =+ i * line_spacing
+            label = pygame_gui.elements.UILabel(
+                relative_rect=pygame.Rect(center_x - 200, y, 400, 30),
+                text=text,
+                manager=self.manager,
+                object_id=f"@settings_label_{i}"
+            )
+            self.labels.append(label)
+
+            if text.startswith('Change Player Mark'):
+                self.x_button = pygame_gui.elements.UIButton(
+                    relative_rect=pygame.Rect(center_x - 60, y + 40, 40, 40),
+                    text='',
+                    manager=self.manager
+                )
+                self.o_button = pygame_gui.elements.UIButton(
+                    relative_rect=pygame.Rect(center_x + 20, y + 40, 40, 40),
+                    text='',
+                    manager=self.manager
+                )
+
+
+            elif text.startswith('Music: Toggle'):
+                self.music_toggle_button = pygame_gui.elements.UIButton(
+                    relative_rect=pygame.Rect(center_x - 60, y + 40, 120, 30),
+                    text='Music: ON' if self.music_on else 'Music: OFF',
+                    manager=self.manager
+                )
+
+            elif text.startswith('Change Music Track'):
+                self.prev_track_button = pygame_gui.elements.UIButton(
+                    relative_rect=pygame.Rect(center_x - 100, y + 40, 40, 30),
+                    text='<',
+                    manager=self.manager
+                )
+                self.next_track_button = pygame_gui.elements.UIButton(
+                    relative_rect=pygame.Rect(center_x + 60, y + 40, 40, 30),
+                    text='>',
+                    manager=self.manager
+                )
+
+            elif text.startswith('Volume'):
+                self.slider = pygame_gui.elements.UIHorizontalSlider(
+                    relative_rect=pygame.Rect(center_x - 100, y + 40, 200, 25),
+                    start_value=self.volume,
+                    value_range=(0, 100),
+                    manager=self.manager
+                )
+                self.volume_label = pygame_gui.elements.UILabel(
+                    relative_rect=pygame.Rect(center_x + 110, y + 40, 80, 25),
+                    text=str(self.slider.get_current_value()) + '%',
+                    manager=self.manager
+                )
+
+         # draw "Go back" button below all other settings
+        y += line_spacing
+        self.go_back_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect(center_x - 60, y + 40, 120, 30),
+                text='Go back',
+            manager=self.manager
+        )
+
+        pygame.display.flip()
+
+    def draw_images_on_buttons(self):
+        if self.x_button:
+            self.screen.blit(self.x_image, self.x_button.rect.topleft)
+        if self.o_button:
+            self.screen.blit(self.o_image, self.o_button.rect.topleft)
+

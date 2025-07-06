@@ -11,7 +11,7 @@ class TicTacToe:
         self.ai_mark = 'O'
         self.player_mark = 'X'
         self.ai = AI.AI(self.board_class, self.ai_mark, self.player_mark)
-        self.ui = UI.UI(self.board_class, self.ai, self.ai_mark, self.player_mark)
+        self.game_UI = UI.UI(self.board_class, self.ai, self.ai_mark, self.player_mark)
 
         self.turn = self.player_mark
         # self.remaining_move_list = []
@@ -21,7 +21,7 @@ class TicTacToe:
     def start(self):
         # self.board_class.__str__()
         # print(self.board_class.check_diagonal())
-        self.ui.run()
+        self.game_UI.run()
         # self.board_class.__str__()
         # while self.running and not self.board_class.is_full():
         #     if self.turn == self.player_mark:

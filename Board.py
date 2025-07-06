@@ -271,3 +271,20 @@ class Board:
     def ai_move(self, field):
         self.make_move(self.ai_mark, field)
         # self.__str__()
+
+    def reset_board(self):
+        """
+        Reset the board to the initial state.
+        """
+        self.board = ['-1'] * self.field_number
+        self.free_field = self.field_number
+        self.remaining_move_list = [field for field in range(self.field_number)]
+        self.ai_marked_field = None
+        self.turn = self.player_mark
+        self.index_element = None
+        self.move_history.clear()
+        self.winner = None
+
+    def set_marks(self, player, ai):
+        self.player_mark = player
+        self.ai_mark = ai
