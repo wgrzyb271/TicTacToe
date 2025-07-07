@@ -69,6 +69,7 @@ class Board:
         self.index_element = None
         self.move_history = []  # list of tuples (field, index_before_removal)
 
+
         # self.board = [
         # '-1', '-1', '-1',
         # '-1', '-1', '-1',
@@ -132,6 +133,10 @@ class Board:
         self.player_mark = 'X'
         self.ai_mark = 'O'
         self.winner = None
+
+        # multiplayer
+        self.fist_player_mark = 'X'
+        self.second_player_mark = 'O'
 
     def __str__(self):
         print()
@@ -267,6 +272,11 @@ class Board:
 
         return result
 
+    def multiplayer_move(self, field, player):
+        result = self.make_move(player, field)
+
+        return result
+
 
     def ai_move(self, field):
         self.make_move(self.ai_mark, field)
@@ -288,3 +298,14 @@ class Board:
     def set_marks(self, player, ai):
         self.player_mark = player
         self.ai_mark = ai
+        self.fist_player_mark = self.player_mark
+        self.second_player_mark = self.ai_mark
+
+    def get_winner(self):
+        return self.winner
+
+    def is_tie(self) -> bool:
+        if self.winner is None and self.is_full():
+            return True
+        else:
+            return False

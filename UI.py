@@ -37,7 +37,7 @@ class UI:
         # UI init and screen settings
         pygame.init()
         self.size = width, height = 800, 800
-        self.screen = pygame.display.set_mode(self.size)
+        self.screen = pygame.display.set_mode(self.size, pygame.DOUBLEBUF)
         pygame.display.set_caption("Tic Tac Toe")
 
         # game fields
@@ -46,6 +46,13 @@ class UI:
         self.ai_mark = ai_mark
         self.player_mark = player_mark
         self.turn = self.board_class.turn
+
+        # turn
+        self.turn_rect = None
+
+        # multiplayer
+        self.fist_player_mark = self.board_class.fist_player_mark
+        self.second_player_mark = self.board_class.second_player_mark
 
         # visuals
         self.background_color = pygame.Color("black")
@@ -74,7 +81,7 @@ class UI:
 
         self._music_manager()
         self.running = True
-        while True:
+        while self.running:
             self.choice = self.menu.main_menu()
 
             match self.choice:
@@ -84,9 +91,10 @@ class UI:
                     self._multiple_player_game()
                 case Option.SETTINGS:
                     self.choice, self.player_mark, self.ai_mark = self.settings.game_settings(self.player_mark, self.ai_mark)
+                    self.fist_player_mark = self.player_mark
+                    self.second_player_mark = self.ai_mark
                     self.board_class.set_marks(self.player_mark, self.ai_mark)
-                    print(self.player_mark)
-                    print(self.ai_mark)
+                    self.running = self.settings.get_running_status()
                 case Option.MAIN_MENU:
                     continue
                 case Option.EXIT:
@@ -108,15 +116,18 @@ class UI:
         self.running = True
         self.board_class.reset_board()
 
+
     def _single_player_game(self) -> None:
         self.reset_game()
         self._draw_board()
+        self._print_turn()
         while self.running and not self.board_class.is_full():
             for event in pygame.event.get():
                 if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                     self.running = False
                     break
 
+                self._print_turn()
                 self._render_player(event)
 
             if not self.running:
@@ -124,16 +135,70 @@ class UI:
 
             self.render_ai()
 
-            if self.board_class.check_for_win():
+
+            if self.board_class.check_for_win() or self.board_class.is_tie():
                 # self.board_class.__str__()
                 # self._display_winner(self.board_class.winner)
+                # print(self.board_class.get_winner())
+                self._print_turn(True, self.board_class.get_winner())
                 pygame.time.wait(3000)  # wait 3 seconds
-                self.running = False
                 break
 
     def _multiple_player_game(self) -> None:
         self.reset_game()
         self._draw_board()
+        self.turn = self.fist_player_mark
+        self._print_turn()
+        while self.running and not self.board_class.is_full():
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                    self.running = False
+                    break
+
+                self._print_turn()
+                self._render_multiplayer(event)
+
+            if not self.running:
+                break
+
+
+            if self.board_class.check_for_win() or self.board_class.is_tie():
+                # self.board_class.__str__()
+                # self._display_winner(self.board_class.winner)
+                self._print_turn(True, self.board_class.get_winner())
+                pygame.time.wait(3000)  # wait 3 seconds
+                break
+
+    def _print_turn(self, game_over=False, winner=None) -> None:
+        font = pygame.font.SysFont(None, 48)
+
+        x, y = self.screen.get_width() // 2, self.screen.get_height() // 2 - 200
+
+        if hasattr(self, 'turn_rect') and self.turn_rect:
+            self.screen.fill(self.background_color, self.turn_rect)
+
+        text = ''
+        if not game_over:
+            text = f"Player {self.turn} turn"
+        elif game_over and winner is not None:
+            text = f"Player {winner} wins"
+        elif game_over and winner is None:
+            text = "Tie"
+
+        text_surface = font.render(text, True, pygame.Color('white'), self.background_color)
+        self.turn_rect = text_surface.get_rect(center=(x, y))
+
+        self.screen.blit(text_surface, self.turn_rect)
+
+        pygame.display.flip()
+
+    def _render_multiplayer(self, event):
+        if self.turn == self.fist_player_mark and event.type == pygame.MOUSEBUTTONDOWN:
+            position = pygame.mouse.get_pos()
+            self._mark_player(position, self.fist_player_mark, self.second_player_mark)
+        elif self.turn == self.second_player_mark and event.type == pygame.MOUSEBUTTONDOWN:
+            position = pygame.mouse.get_pos()
+            self._mark_player(position, self.second_player_mark, self.fist_player_mark)
 
     def _render_player(self, event) -> None:
         """
@@ -153,7 +218,25 @@ class UI:
         """
         if self.turn == self.ai_mark:
             move = self.ai.get_best_move()
+            time.sleep(0.3)
             self._mark_ai_move(move)
+
+    def _mark_player(self, position: tuple, player, opponent) -> None:
+        """
+        Registers the move on the board.
+        """
+        x, y = position
+        for field, rect in enumerate(self.rect_list):
+            if rect.collidepoint(x, y) and not self.occupied_field[field]:
+                self.occupied_field[field] = True
+                if player == 'X':
+                    x, y = rect.topleft
+                    self._draw_x(x, y)
+                else:
+                    x, y = rect.center
+                    self._draw_o(x, y)
+                self.board_class.multiplayer_move(field, player)
+                self.turn = opponent
 
 
 
@@ -390,6 +473,9 @@ class Settings:
         self.x_image = pygame.transform.scale(self.x_image, (40, 40))
         self.o_image = pygame.transform.scale(self.o_image, (40, 40))
 
+    def get_running_status(self):
+        return self.running
+
     def game_settings(self, player, ai):
         self._draw_settings()
 
@@ -528,4 +614,3 @@ class Settings:
             self.screen.blit(self.x_image, self.x_button.rect.topleft)
         if self.o_button:
             self.screen.blit(self.o_image, self.o_button.rect.topleft)
-
