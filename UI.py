@@ -380,7 +380,8 @@ class Menu:
         options = [
             ("SINGLE-PLAYER", Option.SINGLE_PLAYER),
             ("MULTI-PLAYER", Option.MULTIPLE_PLAYER),
-            ("SETTINGS", Option.SETTINGS)
+            ("SETTINGS", Option.SETTINGS),
+            ("EXIT", Option.EXIT)
         ]
 
         for i, (text, opt_enum) in enumerate(options):
