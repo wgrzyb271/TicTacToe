@@ -1,12 +1,12 @@
+import os
 import time
 from enum import Enum
-from unittest import case
-import tkinter as tk
-import pygame
-from pygame import AUDIO_ALLOW_ANY_CHANGE
-import pygame_gui
 
-# TODO improve UI - add settings screen and option to play 1 vs 1 player
+import pygame
+import pygame_gui
+from pygame import AUDIO_ALLOW_ANY_CHANGE
+
+# TODO add _draw_winner animation for _draw_winner (cross out winner)
 
 class Option(Enum):
     SINGLE_PLAYER = 0
@@ -49,6 +49,7 @@ class UI:
 
         # turn
         self.turn_rect = None
+        self.turn_position = None
 
         # multiplayer
         self.fist_player_mark = self.board_class.fist_player_mark
@@ -86,8 +87,12 @@ class UI:
 
             match self.choice:
                 case Option.SINGLE_PLAYER:
+                    self.board_class.set_board_size(3)
+                    self.board_class.size = 3
                     self._single_player_game()
                 case Option.MULTIPLE_PLAYER:
+                    self.board_class.set_board_size(self.settings.get_board_size(), True)
+                    self.board_class.size = self.settings.get_board_size()
                     self._multiple_player_game()
                 case Option.SETTINGS:
                     self.choice, self.player_mark, self.ai_mark = self.settings.game_settings(self.player_mark, self.ai_mark)
@@ -172,7 +177,8 @@ class UI:
     def _print_turn(self, game_over=False, winner=None) -> None:
         font = pygame.font.SysFont(None, 48)
 
-        x, y = self.screen.get_width() // 2, self.screen.get_height() // 2 - 200
+        x = self.screen.get_width() // 2
+        y = self.turn_position - 35
 
         if hasattr(self, 'turn_rect') and self.turn_rect:
             self.screen.fill(self.background_color, self.turn_rect)
@@ -182,6 +188,7 @@ class UI:
             text = f"Player {self.turn} turn"
         elif game_over and winner is not None:
             text = f"Player {winner} wins"
+            self._draw_winner()
         elif game_over and winner is None:
             text = "Tie"
 
@@ -191,6 +198,42 @@ class UI:
         self.screen.blit(text_surface, self.turn_rect)
 
         pygame.display.flip()
+
+    def _draw_winner(self) -> None:
+        path = self.board_class.get_winner_path()
+        if path is None:
+            return None
+
+        winner = self.board_class.get_winner()
+        # color = pygame.Color('green') if winner == 'X' else pygame.Color('red')
+        color = pygame.Color('purple')
+        start_rect = self.rect_list[path[0]]
+        end_rect = self.rect_list[path[-1]]
+
+        dx = end_rect.centerx - start_rect.centerx
+        dy = end_rect.centery - start_rect.centery
+
+        # row
+        if dy == 0:
+            start_pos = (start_rect.left, start_rect.centery)
+            end_pos = (end_rect.right, end_rect.centery)
+            print(start_pos, end_pos)
+        # column
+        elif dx == 0:
+            start_pos = (start_rect.centerx, start_rect.top)
+            end_pos = (end_rect.centerx, end_rect.bottom)
+        # left diagonal
+        elif dx > 0 and dy > 0:
+            start_pos = start_rect.topleft
+            end_pos = end_rect.bottomright
+        # right diagonal
+        else:
+            start_pos = start_rect.topright
+            end_pos = end_rect.bottomleft
+
+        pygame.draw.line(self.screen, color, start_pos, end_pos, width=5)
+        pygame.display.flip()
+        return None
 
     def _render_multiplayer(self, event):
         if self.turn == self.fist_player_mark and event.type == pygame.MOUSEBUTTONDOWN:
@@ -294,10 +337,14 @@ class UI:
         """
         self._clear_screen()
         screen_width, screen_height = pygame.display.get_surface().get_size()
+        self.total_area = self.board_class.board_size * self.rect_size
+
+        center_x = (screen_width - self.total_area) / 2
+        center_y = (screen_height - self.total_area) / 2
+        self.turn_position = center_y
+
         for i in range(self.board_class.board_size):
             for j in range(self.board_class.board_size):
-                center_x = (abs(screen_width - self.total_area / self.board_class.board_size)) / 2
-                center_y = (abs(screen_height - self.total_area / self.board_class.board_size)) / 2
                 current_rect = pygame.Rect(center_x + self.rect_size * j, center_y + self.rect_size * i, self.rect_size,
                                            self.rect_size)
                 # save rect cords for later usage
@@ -326,7 +373,7 @@ class UI:
         Manages music playback.
         """
         if not self.music_loaded:
-            pygame.mixer.music.load('music/beatbox.mp3')
+            pygame.mixer.music.load('music/0.mp3')
             self.music_loaded = True
             pygame.mixer.music.play(-1)
         else:
@@ -432,6 +479,9 @@ class Menu:
         self.reset_attr()
 
 
+def get_total_music():
+    file_list = os.listdir('music')
+    return len(file_list)
 
 
 class Settings:
@@ -444,9 +494,16 @@ class Settings:
         self.clock = pygame.time.Clock()
         self.rect_size = 40
 
+        self.current_music = 1
+        self.total_music = get_total_music()
+
+        self.board_size_dropdown = None
+        self.selected_board_size = '3x3'
+
         self.texts = [
             ('Settings', 'green'),
             ('Change Player Mark - X is default', None),
+            ('Change Multiplayer board size', None),
             ('Music: Toggle ON/OFF', None),
             ('Change Music Track - Use Left/Right Arrows', None),
             ('Volume: Use Up/Down Arrows to Adjust', None),
@@ -477,6 +534,9 @@ class Settings:
     def get_running_status(self):
         return self.running
 
+    def get_board_size(self):
+        return int(self.selected_board_size[0])
+
     def game_settings(self, player, ai):
         self._draw_settings()
 
@@ -501,6 +561,7 @@ class Settings:
                             self.selected_mark = 'O'
                             player = 'O'
                             ai = 'X'
+
                         elif event.ui_element == self.music_toggle_button:
                             self.music_on = not self.music_on
                             if self.music_on:
@@ -510,11 +571,21 @@ class Settings:
                                 pygame.mixer.music.pause()
                                 self.music_toggle_button.set_text("Music: OFF")
                         elif event.ui_element == self.prev_track_button:
-                            print("Previous music track")  # TODO: implement actual logic
+                            pygame.mixer.music.unload()
+                            self.current_music = (self.current_music - 1) % self.total_music
+                            pygame.mixer.music.load(f'music/{self.current_music}.mp3')
+                            pygame.mixer.music.play(-1)
                         elif event.ui_element == self.next_track_button:
-                            print("Next music track")  # TODO: implement actual logic
+                            pygame.mixer.music.unload()
+                            self.current_music = (self.current_music + 1) % self.total_music
+                            pygame.mixer.music.load(f'music/{self.current_music}.mp3')
+                            pygame.mixer.music.play(-1)
                         elif event.ui_element == self.go_back_button:
                             return Option.MAIN_MENU, player, ai
+
+                    elif event.user_type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED:
+                        if event.ui_element == self.board_size_dropdown:
+                            self.selected_board_size = event.text
 
                     elif event.user_type == pygame_gui.UI_HORIZONTAL_SLIDER_MOVED and event.ui_element == self.slider:
                         self.volume = self.slider.get_current_value()
@@ -566,6 +637,23 @@ class Settings:
                     text='',
                     manager=self.manager
                 )
+
+
+            elif text.startswith('Change Multiplayer board size'):
+
+                self.board_size_dropdown = pygame_gui.elements.UIDropDownMenu(
+
+                    options_list=['3x3', '4x4', '5x5', '6x6'],
+
+                    starting_option=self.selected_board_size,
+
+                    relative_rect=pygame.Rect(center_x - 60, y + 40, 120, 30),
+
+                    manager=self.manager
+
+                )
+
+
 
 
             elif text.startswith('Music: Toggle'):

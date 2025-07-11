@@ -68,7 +68,7 @@ class Board:
         self.turn = 'X'
         self.index_element = None
         self.move_history = []  # list of tuples (field, index_before_removal)
-
+        self.winner_path = None
 
         # self.board = [
         # '-1', '-1', '-1',
@@ -173,6 +173,7 @@ class Board:
         frame = [self.board[field * offset] for field in range(self.board_size)]
         if move != '-1' and pattern == frame:
             self.winner = move
+            self.winner_path = [field * offset for field in range(self.board_size)]
             return self.winner
 
         # check right diagonal
@@ -182,6 +183,7 @@ class Board:
         frame = [self.board[(self.board_size - 1) + field * offset] for field in range(self.board_size)]
         if move != '-1' and pattern == frame:
             self.winner = move
+            self.winner_path = [(self.board_size - 1) + field * offset for field in range(self.board_size)]
             return self.winner
 
         return None
@@ -207,6 +209,7 @@ class Board:
             frame = [self.board[col + i * self.board_size] for i in range(0, self.board_size)]
             if move != '-1' and pattern == frame:
                 self.winner = move
+                self.winner_path = [col + i * self.board_size for i in range(0, self.board_size)]
                 return self.winner
         return None
         # for col in range(0, self.board_size):
@@ -225,6 +228,7 @@ class Board:
             frame = [self.board[i] for i in range(row, row + self.board_size)]
             if move != '-1' and pattern == frame:
                 self.winner = move
+                self.winner_path = [i for i in range(row, row + self.board_size)]
                 return self.winner
         return None
         # for row in range(0, self.field_number, self.board_size):
@@ -294,6 +298,7 @@ class Board:
         self.index_element = None
         self.move_history.clear()
         self.winner = None
+        self.winner_path = None
 
     def set_marks(self, player, ai):
         self.player_mark = player
@@ -309,3 +314,10 @@ class Board:
             return True
         else:
             return False
+
+    def set_board_size(self, board_size, is_multiplayer=False):
+        self.board_size = board_size
+        self.field_number = self.board_size ** 2
+
+    def get_winner_path(self):
+        return self.winner_path
