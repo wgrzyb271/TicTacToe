@@ -306,6 +306,9 @@ class Board:
         self.fist_player_mark = self.player_mark
         self.second_player_mark = self.ai_mark
 
+    # def get_marks(self):
+    #     return self.player_mark, self.ai_mark
+
     def get_winner(self):
         return self.winner
 

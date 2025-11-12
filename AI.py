@@ -74,3 +74,7 @@ class AI:
 
         self.best_move = best_move
         return best_move
+
+    def set_marks(self, player, ai):
+        self.player_mark = player
+        self.ai_mark = ai

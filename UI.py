@@ -99,6 +99,7 @@ class UI:
                     self.fist_player_mark = self.player_mark
                     self.second_player_mark = self.ai_mark
                     self.board_class.set_marks(self.player_mark, self.ai_mark)
+                    self.ai.set_marks(ai=self.ai_mark, player=self.player_mark)
                     self.running = self.settings.get_running_status()
                 case Option.MAIN_MENU:
                     continue
@@ -178,7 +179,7 @@ class UI:
         font = pygame.font.SysFont(None, 48)
 
         x = self.screen.get_width() // 2
-        y = self.turn_position - 35
+        y = self.turn_position - 40
 
         if hasattr(self, 'turn_rect') and self.turn_rect:
             self.screen.fill(self.background_color, self.turn_rect)
